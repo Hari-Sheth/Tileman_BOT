@@ -6,30 +6,32 @@ from selenium.webdriver.common.keys import Keys
 #Initialising driver
 
 driver = webdriver.Chrome()
-driver.get("https://tileman.io/")
 
-body_element = driver.find_element(By.TAG_NAME, "body")
-nickname_element = driver.find_element(By.ID, "nick")
+try:
+    driver.get("https://tileman.io/")
 
-# setting nickname to assert dominance
+    body_element = driver.find_element(By.TAG_NAME, "body")
+    nickname_element = driver.find_element(By.ID, "nick")
 
-nickname_element.clear()
-nickname_element.send_keys("tldr")
+    # setting nickname to assert dominance
 
-# starting the game
+    nickname_element.clear()
+    nickname_element.send_keys("tldr")
 
-body_element.send_keys(Keys.ENTER)
+    # starting the game
 
-# waiting 2 sec buffer (hopefully no ads idk)
+    body_element.send_keys(Keys.ENTER)
 
-time.sleep(2)
+    # waiting 2 sec buffer (hopefully no ads idk)
 
-# control start from here
+    time.sleep(2)
 
-body_element.send_keys(Keys.ARROW_UP)
+    # control start from here
 
-time.sleep(10)
+    body_element.send_keys(Keys.ARROW_UP)
 
-# quit driver to close
+    time.sleep(10)
+finally:
+    # quit driver to close
 
-driver.quit()
+    driver.quit()
