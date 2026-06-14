@@ -12,11 +12,13 @@ driver = webdriver.Chrome()
 driver.maximize_window()
 
 class Bot:
-    def __init__(self, name, body_element, overlay_element, sct):
+    def __init__(self, name, body_element, overlay_element, sct, monitor, cellInfo):
         self.name = name
         self.controller = body_element
         self.overlay = overlay_element
         self.sct = sct
+        self.monitor = monitor
+        self.cellInfo = cellInfo
 
     def up(self):
         self.controller.send_keys(Keys.ARROW_UP)
@@ -36,9 +38,12 @@ class Bot:
     def run(self):
         pass
 
+    def logic(self, grid):
+        pass
+
 class RandomBot(Bot):
-    def __init__(self, name, body_element, overlay_element, sct):
-        super().__init__(name, body_element, overlay_element, sct)
+    def __init__(self, name, body_element, overlay_element, sct, monitor, cellInfo):
+        super().__init__(name, body_element, overlay_element, sct, monitor, cellInfo)
     
     def run(self):
         while True:
@@ -58,34 +63,54 @@ class RandomBot(Bot):
                 self.controller.send_keys(Keys.RETURN)
 
 class EyeBot(Bot):
-    def __init__(self, name, body_element, overlay_element, sct):
-        super().__init__(name, body_element, overlay_element, sct)
+    def __init__(self, name, body_element, overlay_element, sct, monitor, cellInfo):
+        super().__init__(name, body_element, overlay_element, sct, monitor, cellInfo)
     
     def run(self):
+        cHeight = self.cellInfo["cell_height"]
+        cWidth = self.cellInfo["cell_width"]
         while "Screen capturing":
-            # for fps calculation
-            last_time = time.time()
+            # for fps calculation (For debugging)
+            # last_time = time.time()
 
             # Get raw pixels from the screen, save it to a Numpy array
-            # Each element img[x][y] is an rgba array
-            # Example: img[0][0] = [12, 12, 12, 255]
-            # Use this for logic
-            img = np.array(sct.grab(monitor))
+            img = np.array(self.sct.grab(self.monitor))
 
-            # Display the picture
+            # Define grid array as bgr color value of cells
+            # Use this for logic
+            grid = img[round(cHeight/2)::cHeight, round(cWidth/2)::cWidth]
+
+            self.logic(grid)
+
+            # Display the picture (For debugging)
             cv2.imshow("OpenCV/Numpy normal", img)
 
-            # Show fps
-            print(f"fps: {1 / (time.time() - last_time)}")
+            # Show fps (For debugging)
+            # print(f"fps: {1 / (time.time() - last_time)}")
 
             # Press "q" to quit (Works only on the display window)
             if cv2.waitKey(25) & 0xFF == ord("q"):
                 cv2.destroyAllWindows()
                 break
 
+            # Start again if lost
             if self.check_lose():
                 self.controller.send_keys(Keys.RETURN)
                 self.controller.send_keys(Keys.RETURN)
+    
+    def logic(self, grid):
+        # Simple Boundary detection
+        cVertical = self.cellInfo["num_cell_vertical"]
+        cHorizontal = self.cellInfo["num_cell_horizontal"]
+        boundary_color = self.cellInfo["boundary_color"]
+        if np.array_equal(grid[cVertical//2][0], boundary_color):
+            print("Boundary Detected on Left")
+        if np.array_equal(grid[cVertical//2][cHorizontal-1], boundary_color):
+            print("Boundary Detected on Right")
+        if np.array_equal(grid[0][cHorizontal//2], boundary_color):
+            print("Boundary Detected on Top")
+        if np.array_equal(grid[cVertical-1][cHorizontal//2], boundary_color):
+            print("Boundary Detected on Bottom")
 
 try:
     # Initialising website and elements
@@ -96,7 +121,7 @@ try:
     nickname_element = driver.find_element(By.ID, "nick")
 
     # setting nickname to assert dominance
-    nickname = "ICanSee"
+    nickname = "AlmostSmart"
     nickname_element.clear()
     nickname_element.send_keys(nickname)
 
@@ -105,15 +130,36 @@ try:
 
     with mss.MSS() as sct:
         # Setting for screen capture
+
+        # These constants may differ with different screen sizes
+        # Do adjust these with cv2.imshow function in bot.run()
+        screen_width = 1920
+        screen_height = 850
+        top_offset = 220
+        # Count the cells lmao
+        num_cell_horizontal = 43
+        num_cell_vertical = 19
+
+        cell_width = round(screen_width / num_cell_horizontal)
+        cell_height = round(screen_height / num_cell_vertical)
+
+        cellInfo = {
+            "cell_width": cell_width,
+            "cell_height": cell_height,
+            "num_cell_horizontal": num_cell_horizontal,
+            "num_cell_vertical": num_cell_vertical,
+            "boundary_color": np.array([153, 153, 153, 255])
+        }
+
         monitor = {
-            "top": 220,
+            "top": top_offset,
             "left": 0,
-            "width": 1920,
-            "height": 850
+            "width": screen_width,
+            "height": screen_height
         }
 
         # Initialising the bot
-        bot = EyeBot(nickname, body_element, overlay_element, sct)
+        bot = EyeBot(nickname, body_element, overlay_element, sct, monitor, cellInfo)
 
         # waiting 2 sec buffer (hopefully no ads idk)
         time.sleep(2)
