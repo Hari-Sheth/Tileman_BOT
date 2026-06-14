@@ -1,0 +1,4 @@
+selenium
+mss
+numpy
+opencv-python
