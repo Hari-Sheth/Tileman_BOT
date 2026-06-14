@@ -65,6 +65,20 @@ class EyeBot(Bot):
     
     def run(self):
         while "Screen capturing":
+            # trying the screen capture within the function? - it might be slower now though
+            canvas_elements = driver.find_element(By.ID,"canvas")
+            window_position, window_size = driver.get_window_position(), driver.get_window_size()
+            driver_top, driver_left = window_position["y"], window_position["x"]
+            driver_width, driver_height  = window_size["width"], window_size["height"]
+            width = canvas_elements.get_property("width")
+            height = canvas_elements.get_property("height")
+            print(width,height)
+            monitor = {
+                "top": driver_top+driver_height-height,
+                "left": driver_left+driver_width-width,
+                "width": width,
+                "height": height
+            }
             # for fps calculation
             last_time = time.time()
 
@@ -72,10 +86,18 @@ class EyeBot(Bot):
             # Each element img[x][y] is an rgba array
             # Example: img[0][0] = [12, 12, 12, 255]
             # Use this for logic
-            img = np.array(sct.grab(monitor))
-
+            img = np.array(sct.grab(monitor)) # Somehow this works on Windows Powershell and not on WSL?
             # Display the picture
-            cv2.imshow("OpenCV/Numpy normal", img)
+            img2 = np.where(img - np.array([153,153,153,255]).reshape((1,4)) == 0,[0,0,0,255],img)
+            img2 = np.where(img - np.array([194,194,194,255]).reshape((1,4)) == 0,[255,0,0,255],img2)
+            img2 = np.where(img - np.array([41,41,41,255]).reshape((1,4)) == 0,[0,255,0,255],img2)
+            img2 = np.where(img - np.array([102,102,102,255]).reshape((1,4)) == 0,[0,0,255,255],img2)
+            img2 = np.where(img - np.array([51,51,51,255]).reshape((1,4)) == 0,[0,255,255,255],img2)
+            print(img.dtype)
+            img2 = img2.astype(np.uint8)
+            print(img2)
+            print(img.shape, img2.shape)
+            cv2.imshow("OpenCV/Numpy normal", img2)
 
             # Show fps
             print(f"fps: {1 / (time.time() - last_time)}")
@@ -84,22 +106,42 @@ class EyeBot(Bot):
             if cv2.waitKey(25) & 0xFF == ord("q"):
                 cv2.destroyAllWindows()
                 break
+            c = random.randint(1, 4)
+
+            if c == 1:
+                self.up()
+            elif c == 2:
+                self.down()
+            elif c == 3:
+                self.left()
+            else:
+                self.right()
 
             if self.check_lose():
+                print(img)
                 break
                 # self.controller.send_keys(Keys.RETURN)
                 # self.controller.send_keys(Keys.RETURN)
 
 #Initialising driver
-chrome_options = Options()
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.add_argument("--remote-debugging-pipe")
-chrome_options.binary_location = "/usr/bin/google-chrome"
-service = Service(executable_path='/usr/bin/chromedriver')
-driver = webdriver.Chrome(service=service, options=chrome_options)
-# driver = webdriver.Chrome()
-driver.maximize_window()
+
+try:
+    driver = webdriver.Chrome() # this works on Windows Powershell
+except:
+    try: # this works on WSL
+        chrome_options = Options()
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--remote-debugging-pipe")
+        chrome_options.binary_location = "/usr/bin/google-chrome"
+        service = Service(executable_path='/usr/bin/chromedriver')
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+    except: # Hopefully never run into this
+        print("this didn't work either?")
+finally:
+    if driver.session_id is None:
+        exit(1)
+# driver.maximize_window()
 
 try:
     driver.get("https://tileman.io/")
@@ -142,7 +184,7 @@ try:
                 print("Something went wrong with consent element? maybe I clicked it already")
                 # print(str(e))
             finally:
-                nickname = "ooooo"
+                nickname = "meowbotbot"
 
                 # setting nickname to assert dominance
 
@@ -155,21 +197,13 @@ try:
                 
                 print("time to start playing this thing!")
                 with mss.MSS() as sct:
-                    # Setting for screen capture
-                    monitor = {
-                        "top": 220,
-                        "left": 0,
-                        "width": 1920,
-                        "height": 850
-                    }
-                    bot = RandomBot(nickname, body_element, after_element, sct)
-
                     # waiting 2 sec buffer (hopefully no ads idk)
                     time.sleep(2) 
 
                     while game_element.value_of_css_property("display") != "block":
                         print("waiting")
                     # control start from here
+                    bot = EyeBot(nickname, body_element, after_element, sct)
                     while game_element.value_of_css_property("display") == "block" and after_element.value_of_css_property("display") == "none":
                         bot.run()
                     if after_element.value_of_css_property("display") == "block":
