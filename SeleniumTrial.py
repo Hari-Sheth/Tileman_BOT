@@ -67,6 +67,7 @@ class EyeBot(Bot):
         super().__init__(name, body_element, overlay_element, sct, monitor, cellInfo)
     
     def run(self):
+        print(self.monitor)
         cHeight = self.cellInfo["cell_height"]
         cWidth = self.cellInfo["cell_width"]
         while "Screen capturing":
@@ -75,15 +76,27 @@ class EyeBot(Bot):
 
             # Get raw pixels from the screen, save it to a Numpy array
             img = np.array(self.sct.grab(self.monitor))
+            
+            # convert to bgr colors for cv2 annotations
+            img_bgr = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+            
+            # place a tiny blue rectangle on each pixel location where grid is checking the colors at
+            for x in np.arange(round(cWidth/2), self.monitor["width"], cWidth):
+                for y in np.arange(round(cHeight/2), self.monitor["height"], cHeight):
+                    start_point = (x, y)
+                    end_point = (x+1, y+1)
+                    color_blue = (255, 0, 0)  # BGR format
+                    thickness = 1
+                    cv2.rectangle(img_bgr, start_point, end_point, color_blue, thickness)
 
             # Define grid array as bgr color value of cells
             # Use this for logic
             grid = img[round(cHeight/2)::cHeight, round(cWidth/2)::cWidth]
-
+                
             self.logic(grid)
 
             # Display the picture (For debugging)
-            cv2.imshow("OpenCV/Numpy normal", img)
+            cv2.imshow("OpenCV/Numpy normal", img_bgr)
 
             # Show fps (For debugging)
             # print(f"fps: {1 / (time.time() - last_time)}")
@@ -162,7 +175,7 @@ try:
         bot = EyeBot(nickname, body_element, overlay_element, sct, monitor, cellInfo)
 
         # waiting 2 sec buffer (hopefully no ads idk)
-        time.sleep(2)
+        time.sleep(4)
 
         # control start from here
         bot.run()
