@@ -12,13 +12,14 @@ driver = webdriver.Chrome()
 driver.maximize_window()
 
 class Bot:
-    def __init__(self, name, body_element, overlay_element, sct, monitor, cellInfo):
+    def __init__(self, name, body_element, overlay_element, sct, monitor, cellInfo, self_color = None):
         self.name = name
         self.controller = body_element
         self.overlay = overlay_element
         self.sct = sct
         self.monitor = monitor
         self.cellInfo = cellInfo
+        self.color = self_color
 
     def up(self):
         self.controller.send_keys(Keys.ARROW_UP)
@@ -92,6 +93,11 @@ class EyeBot(Bot):
             # Define grid array as bgr color value of cells
             # Use this for logic
             grid = img[round(cHeight/2)::cHeight, round(cWidth/2)::cWidth]
+            
+            # set color only first time
+            if self.color is None:
+                self._set_self_color(grid)
+                print(self.color)
                 
             self.logic(grid)
 
@@ -124,6 +130,10 @@ class EyeBot(Bot):
             print("Boundary Detected on Top")
         if np.array_equal(grid[cVertical-1][cHorizontal//2], boundary_color):
             print("Boundary Detected on Bottom")
+            
+    def _set_self_color(self, grid):
+        # set color to the color of top left tile in the initial 3x3 central area
+        self.color = grid[self.cellInfo["num_cell_vertical"]//2-1][self.cellInfo["num_cell_horizontal"]//2-1]
 
 try:
     # Initialising website and elements
